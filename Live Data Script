@@ -1,146 +1,49 @@
-{
- "cells": [
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "id": "d5d949ee",
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "import pandas as pd\n",
-    "import sqlalchemy\n",
-    "from binance import Client\n",
-    "from binance import AsyncClient, BinanceSocketManager\n",
-    "import nest_asyncio\n",
-    "import asyncio\n",
-    "\n",
-    "nest_asyncio.apply()"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "id": "26bed66b",
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "api_key = '1szr5pdR3hl3BcYcglBMW1D6anUChUAhwrhOdj2moz6ZevAKSoh98si2DhqUXIm5'\n",
-    "api_secret = 'wRZvr9X7XesClNGkRHfl72cWGDFU5wjBqFjKQTQj6Gw9Q7p32HVtOeJiZfIDFlJR'"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "id": "10518f1b",
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "client = Client(api_key, api_secret)"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "id": "6dc94203",
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "bsm = BinanceSocketManager(client)"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "id": "90c247cc",
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "socket = bsm.trade_socket('BTCUSDT')"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "id": "a24b4d46",
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "def createframe(msg):\n",
-    "    df = pd.DataFrame([msg])\n",
-    "    df = df.loc[:, ['s','E','p']]\n",
-    "    df.columns = ['Symbol','Time','Price']\n",
-    "    df.Price = df.Price.astype(float)\n",
-    "    df.Time = pd.to_datetime(df.Time, unit='ms')\n",
-    "    return df"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "id": "27e61bdc",
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "engine = sqlalchemy.create_engine('sqlite:///BTCUSDTstream.db')"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "id": "26190064",
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "async def main():\n",
-    "    client = await AsyncClient.create()\n",
-    "    bm = BinanceSocketManager(client)\n",
-    "\n",
-    "    ts = bm.trade_socket('BTCUSDT')\n",
-    "\n",
-    "    async with ts as tscm:\n",
-    "        while True:\n",
-    "            res = await tscm.recv()\n",
-    "            if res:\n",
-    "                frame = createframe(res)\n",
-    "                frame.to_sql('BTCUSDT', engine, if_exists='append', index=False)\n",
-    "                print(createframe(res))\n",
-    "\n",
-    "    await client.close_connection()\n",
-    "\n",
-    "if __name__ == \"__main__\":\n",
-    "\n",
-    "    loop = asyncio.get_event_loop()\n",
-    "    loop.run_until_complete(main())"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "id": "73102b23",
-   "metadata": {},
-   "outputs": [],
-   "source": []
-  }
- ],
- "metadata": {
-  "kernelspec": {
-   "display_name": "Python 3 (ipykernel)",
-   "language": "python",
-   "name": "python3"
-  },
-  "language_info": {
-   "codemirror_mode": {
-    "name": "ipython",
-    "version": 3
-   },
-   "file_extension": ".py",
-   "mimetype": "text/x-python",
-   "name": "python",
-   "nbconvert_exporter": "python",
-   "pygments_lexer": "ipython3",
-   "version": "3.10.0"
-  }
- },
- "nbformat": 4,
- "nbformat_minor": 5
-}
+import pandas as pd
+import sqlalchemy
+from binance import Client
+from binance import AsyncClient, BinanceSocketManager
+import nest_asyncio
+import asyncio
+
+nest_asyncio.apply()
+
+api_key = '1szr5pdR3hl3BcYcglBMW1D6anUChUAhwrhOdj2moz6ZevAKSoh98si2DhqUXIm5'
+api_secret = 'wRZvr9X7XesClNGkRHfl72cWGDFU5wjBqFjKQTQj6Gw9Q7p32HVtOeJiZfIDFlJR'
+
+client = Client(api_key, api_secret)
+
+bsm = BinanceSocketManager(client)
+
+socket = bsm.trade_socket('BTCUSDT')
+
+def createframe(msg):
+    df = pd.DataFrame([msg])
+    df = df.loc[:, ['s','E','p']]
+    df.columns = ['Symbol','Time','Price']
+    df.Price = df.Price.astype(float)
+    df.Time = pd.to_datetime(df.Time, unit='ms')
+    return df
+
+engine = sqlalchemy.create_engine('sqlite:///BTCUSDTstream.db')
+
+async def main():
+    client = await AsyncClient.create()
+    bm = BinanceSocketManager(client)
+
+    ts = bm.trade_socket('BTCUSDT')
+
+    async with ts as tscm:
+        while True:
+            res = await tscm.recv()
+            if res:
+                frame = createframe(res)
+                frame.to_sql('BTCUSDT', engine, if_exists='append', index=False)
+                print(createframe(res))
+
+    await client.close_connection()
+
+if __name__ == "__main__":
+
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())
+
