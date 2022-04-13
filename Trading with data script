@@ -1,6 +1,3 @@
-api_key = '1szr5pdR3hl3BcYcglBMW1D6anUChUAhwrhOdj2moz6ZevAKSoh98si2DhqUXIm5'
-api_secret = 'wRZvr9X7XesClNGkRHfl72cWGDFU5wjBqFjKQTQj6Gw9Q7p32HVtOeJiZfIDFlJR'
-
 import pandas as pd
 import sqlalchemy
 from binance import Client
