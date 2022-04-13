@@ -1,0 +1,59 @@
+import yfinance as yf
+import ta
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+%matplotlib inline
+
+plt.style.use('ggplot')
+plt.rcParams['figure.figsize'] = (12, 5)
+
+name = 'Max'
+print(f'Hey {name}')
+
+df = yf.download('BTC-USD', period='1mo', interval='15m')
+
+df.Close = df['Adj Close']
+
+def apply_ind(df):
+    df['SMA_200'] = df.Close.rolling(200).mean()
+    df['SMA_20'] = df.Close.rolling(20).mean()
+    df['std_div'] = df.Close.rolling(20).std()
+    df['Upper'] = df.SMA_20 + 2.5 * df.std_div
+    df['Lower'] = df.SMA_20 - 2.5 * df.std_div
+    df['rsi'] = ta.momentum.rsi(df.Close, 2)
+
+apply_ind(df)
+
+df[['Close','SMA_200','Upper','Lower']].plot()
+
+def conditions(df):
+    df['Buy'] = np.where((df.Close > df.SMA_200) &
+                        (df.Close < df.Lower), 1, 0)
+    df['Sell'] = np.where((df.rsi > 50), 1, 0)
+    df['Buy_price'] = 0.97 * df.Close
+    df['Sell_price'] = df.Open.shift(-1)
+
+conditions(df)
+
+# buy_sells = df[(df.Buy == 1) | (df.Sell == 1)]
+
+# matched = buy_sells[(buy_sells.Buy.diff() == 1) | (buy_sells.Sell.diff() == 1)]
+
+def matched_trades(df):
+    buy_sells = df[(df.Buy == 1) | (df.Sell == 1)]
+    matched = buy_sells[(buy_sells.Buy.diff() == 1) | (buy_sells.Sell.diff() == 1)]
+    return matched
+
+trades = matched_trades(df)
+
+trades
+
+profit = (trades.Sell_price.shift(-1) - trades.Buy_price) / trades.Buy_price
+
+profit = profit[::2]
+
+profit
+
+profit.sum()
