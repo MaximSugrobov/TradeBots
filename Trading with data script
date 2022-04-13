@@ -1,0 +1,45 @@
+api_key = '1szr5pdR3hl3BcYcglBMW1D6anUChUAhwrhOdj2moz6ZevAKSoh98si2DhqUXIm5'
+api_secret = 'wRZvr9X7XesClNGkRHfl72cWGDFU5wjBqFjKQTQj6Gw9Q7p32HVtOeJiZfIDFlJR'
+
+import pandas as pd
+import sqlalchemy
+from binance import Client
+import matplotlib.pyplot as plt
+
+%matplotlib inline
+
+plt.style.use('ggplot')
+plt.rcParams['figure.figsize'] = (18, 5)
+
+client = Client(api_key, api_secret)
+
+engine = sqlalchemy.create_engine('sqlite:///BTCUSDTstream.db')
+
+df = pd.read_sql('BTCUSDT', engine)
+
+plt.plot(df.Price.tail(100000))
+
+df
+
+def strategy(entry, lookback, qty, open_position=False):
+    while True:
+        df = pd.read_sql('BTCUSDT', engine)
+        lookback_period = df.iloc[-lookback:]
+        cumret = (lookback_period.Price.pct_change()+1).cumprod() - 1
+        if not open_position:
+            if cumret[cumret.last_valid_index()] > entry:
+                order = client.create_order(symbol='BTCUSDT', side='BUY', type='MARKET', quantity=qty)
+                print(order)
+                open_position=True
+                break
+    if open_position:
+        while True:
+            df = pd.read_sql('BTCUSDT', engine)
+            since_buy = df.loc[df.Time > pd.to_datetime(order['transactTime'], unit='ms')]
+            if len(since_buy) > 1:
+                since_buy_ret = (since_buy.Price.pct_change()+1).cumprod() - 1
+                last_entry = since_buy_ret[since_buy_ret.last_valid_index()]
+                if last_entry > 0.0015 or last_entry < -0.0015:
+                    order = client.create_order(symbol='BTCUSDT', side='SELL', type='MARKET', quantity=qty)
+                    print(order)
+                    break    
